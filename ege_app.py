@@ -2,6 +2,7 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
+from kivy.graphics import Color, RoundedRectangle
 from sdamgia import SdamGIA
 
 from spinners import SubjectSpinner, TopicSpinner
@@ -24,12 +25,19 @@ class EgeApp(App):
         self.topic_spinner.bind(text=self.on_topic_select)
         
         # Create buttons
+        button_text_color = (1, 1, 1, 1)
         self.get_problem_button = create_button(
             'Получить случайное задание',
             disabled=True,
             on_press=self.get_random_problem
         )
+        self.get_problem_button.color = button_text_color
         
+        # Добавляем скругление краев кнопок
+        with self.get_problem_button.canvas.before:
+            Color(1, 1, 1, 1)
+            RoundedRectangle(pos=self.get_problem_button.pos, size=self.get_problem_button.size, radius=[10])
+
         # Create loading label
         self.loading_label = LoadingLabel(size_hint_y=None, height='48dp')
         
@@ -58,7 +66,13 @@ class EgeApp(App):
             disabled=True,
             on_press=self.check_answer
         )
+        self.check_answer_button.color = button_text_color
         
+        # Добавляем скругление краев кнопок
+        with self.check_answer_button.canvas.before:
+            Color(1, 1, 1, 1)
+            RoundedRectangle(pos=self.check_answer_button.pos, size=self.check_answer_button.size, radius=[10])
+
         # Create result label
         self.result_label = ScrollableLabel(
             text='',
@@ -85,7 +99,6 @@ class EgeApp(App):
 
         # Add get problem button
         self.get_problem_button.background_color = (1, 1, 1, 1)
-        self.get_problem_button.color = (0, 0, 0, 1)
         root.add_widget(self.get_problem_button)
         
         # Add center scroll view
@@ -108,7 +121,6 @@ class EgeApp(App):
         self.answer_input.foreground_color = (0, 0, 0, 1)
         bottom_controls.add_widget(self.check_answer_button)
         self.check_answer_button.background_color = (0.9, 0.9, 0.9, 1)
-        self.check_answer_button.color = (0, 0, 0, 1)
         bottom_controls.add_widget(self.result_label)
         self.result_label.background_color = (1, 1, 1, 1)
         self.result_label.color = (0, 0, 0, 1)
@@ -116,7 +128,36 @@ class EgeApp(App):
         
         return root
 
+    def clear_task_display(self):
+        """Очистить текст и изображение перед загрузкой нового задания."""
+        self.problem_text.text = ''
+        # Удаляем и добавляем виджет изображения для его очистки
+        parent = self.svg_widget.parent
+        if parent:
+            parent.remove_widget(self.svg_widget)
+            self.svg_widget.source = ''
+            self.svg_widget.texture = None
+            parent.add_widget(self.svg_widget)
+            self.svg_widget.canvas.ask_update()
+        self.result_label.text = ''
+
+    def get_random_problem(self, instance=None):
+        self.clear_task_display()
+        subject_code = self.subject_spinner.subject_codes[self.subject_spinner.text]
+        self.current_problem = get_random_problem(
+            self.sdamgia,
+            subject_code,
+            self.current_topic_name,
+            self.problem_text,
+            self.svg_widget,
+            self.loading_label,
+            self.answer_input,
+            self.check_answer_button,
+            self.result_label
+        )
+
     def on_subject_change(self, spinner, text):
+        self.clear_task_display()
         self.problem_text.text = ''
         self.result_label.text = ''
         
@@ -135,11 +176,15 @@ class EgeApp(App):
             categories = set()
             self.topic_spinner.category_ids = {}
             
+            # Фильтруем темы, чтобы исключить неактуальные
+            def is_topic_relevant(topic_name):
+                # Здесь можно добавить логику для проверки актуальности темы
+                return True  # Замените это условие на реальную проверку
+
             for topic in catalog:
                 if isinstance(topic, dict) and 'topic_name' in topic:
                     topic_name = topic['topic_name']
-                    
-                    if is_first_part_topic(topic_name, subject_code):
+                    if is_first_part_topic(topic_name, subject_code) and is_topic_relevant(topic_name):
                         if topic_name not in categories:
                             categories.add(topic_name)
                             self.topic_spinner.category_ids[topic_name] = topic.get('topic_id')
@@ -161,20 +206,6 @@ class EgeApp(App):
                 self.get_problem_button.disabled = False
                 self.current_topic_id = topic_id
                 self.current_topic_name = text
-
-    def get_random_problem(self, instance=None):
-        subject_code = self.subject_spinner.subject_codes[self.subject_spinner.text]
-        self.current_problem = get_random_problem(
-            self.sdamgia,
-            subject_code,
-            self.current_topic_name,
-            self.problem_text,
-            self.svg_widget,
-            self.loading_label,
-            self.answer_input,
-            self.check_answer_button,
-            self.result_label
-        )
 
     def check_answer(self, instance):
         check_answer(

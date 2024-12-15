@@ -15,7 +15,7 @@ def get_random_problem(sdamgia, subject_code, topic_name, problem_text_widget, s
         problem = sdamgia.get_problem_by_id(subject_code, str(problem_id))
         
         if subject_code == 'rus':
-            problem_text = problem.get('condition', {}).get('text', '')
+            problem_text = problem.get('solution', {}).get('text', '')
         else:  
             problem_text = (
                 problem.get('condition', {}).get('text', '') or 
