@@ -49,6 +49,18 @@ class SvgWidget(Image):
             import traceback
             traceback.print_exc()
 
+    def clear(self):
+        """Очистить виджет, сбросив источник изображения и текстуру."""
+        self.source = ''
+        self.texture = None
+        self.canvas.ask_update()
+
+    def reset(self):
+        """Сбросить виджет, удалив изображение и обновив холст."""
+        self.source = ''
+        self.texture = None
+        self.canvas.ask_update()
+
 def convert_svg_to_png(svg_path, png_path=None, size=None):
     try:
         import cairosvg
